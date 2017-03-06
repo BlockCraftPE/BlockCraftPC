@@ -18,7 +18,10 @@
 namespace shoghicp\BigBrother\network;
 
 use pocketmine\item\Item;
+use pocketmine\nbt\NBT;
 use shoghicp\BigBrother\utils\Binary;
+use shoghicp\BigBrother\utils\ConvertUtils;
+use shoghicp\BigBrother\utils\ComputerItem;
 
 abstract class Packet extends \stdClass{
 
@@ -51,22 +54,10 @@ abstract class Packet extends \stdClass{
 	}
 
 	protected function getPosition(&$x, &$y, &$z){
-		$int1 = $this->getInt();
-		$int2 = $this->getInt();
-
-		$x = $int1 >> 6;
-		$y = ((($int1 & 0x3F) << 2) | ($int2 & 0xFCFFFFFF) >> 26);
-		$z = $int2 & 0x3FFFFFF;
-
-		if(PHP_INT_MAX > 0x7FFFFFFF){
-			$x = $x << 38 >> 38;
-			$y = $y << 58 >> 58;
-			$z = $z << 38 >> 38;
-		}else{
-			$x = $x << 6 >> 6;
-			$y = $y << 26 >> 26;
-			$z = $z << 6 >> 6;
-		}
+		$long = $this->getLong();
+		$x = $long >> 38;
+		$y = ($long >> 26) & 0xFFF;
+		$z = $long << 38 >> 38;
 	}
 
 	protected function getFloat(){
@@ -92,20 +83,34 @@ abstract class Packet extends \stdClass{
 			if($len > 0){
 				$nbt = $this->get($len);
 			}
-			return Item::get($itemId, $damage, $count, $nbt);
+
+			$item = new ComputerItem($itemId, $damage, $count, $nbt);
+
+			ConvertUtils::convertItemData(false, $item);
+
+			return $item;
 		}
 	}
 
 	protected function putSlot(Item $item){
+		ConvertUtils::convertItemData(true, $item);
+
 		if($item->getID() === 0){
 			$this->putShort(-1);
 		}else{
 			$this->putShort($item->getID());
 			$this->putByte($item->getCount());
 			$this->putShort($item->getDamage());
-			$nbt = $item->getCompoundTag();
-			$this->putByte(strlen($nbt));//Short?
-			$this->put($nbt);
+
+			/*$oldnbt = new NBT(NBT::LITTLE_ENDIAN);
+			$oldnbt->read($item->getCompoundTag());
+			$newnbt = new NBT(NBT::BIG_ENDIAN);
+			$newnbt->setData($oldnbt->getData());
+
+			$nbt = $newnbt->write();
+			$this->putByte(strlen($nbt));
+			$this->put($nbt);*/
+			$this->putByte(0);//TODO
 		}
 	}
 
@@ -150,11 +155,8 @@ abstract class Packet extends \stdClass{
 	}
 
 	protected function putPosition($x, $y, $z){
-		$int2 = ($z & 0x3FFFFFF); //26 bits
-		$int2 |= ($y & 0x3F) << 26; //6 bits
-		$int1 = ($y & 0xFC0) >> 6; //6 bits
-		$int1 |= ($x & 0x3FFFFFF) << 6; //26 bits
-		$this->buffer .= Binary::writeInt($int1) . Binary::writeInt($int2);
+		$long = (($x & 0x3FFFFFF) << 38) | (($y & 0xFFF) << 26) | ($z & 0x3FFFFFF);
+		$this->putLong($long);
 	}
 
 	protected function putFloat($v){

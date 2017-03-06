@@ -5,6 +5,7 @@ namespace shoghicp\BigBrother;
 use pocketmine\Player;
 use pocketmine\level\Level;
 use shoghicp\BigBrother\utils\Binary;
+use shoghicp\BigBrother\utils\ConvertUtils;
 
 class DesktopChunk{
 	private $player, $chunkX, $chunkZ, $provider, $groundup, $bitmap, $biomes;
@@ -18,48 +19,6 @@ class DesktopChunk{
 		$this->bitmap = 0;
 		$this->biomes = null;
 		$this->data = $this->generateChunk();
-	}
-
-	public function convertPEToPCBlockData(&$blockid, &$blockdata){//TODO: Move to Class or rewrite easy
-		$blockidlist = [
-			[
-				[243, 0], [3, 2]
-			],
-			[
-				[198, 0], [208, 0]
-			],
-			[
-				[247, -1], [19, 0]//Nether Reactor Core is Sponge
-			],
-			[
-				[157, -1], [125, -1]
-			],
-			[
-				[158, -1], [126, -1]
-			],
-			/*
-			[
-				[PE], [PC]
-			],
-			*/
-		];
-
-		foreach($blockidlist as $convertblockdata){
-			if($convertblockdata[0][0] === $blockid){
-				if($convertblockdata[0][1] === -1){
-					$blockid = $convertblockdata[1][0];
-					if($convertblockdata[1][1] !== -1){
-						$blockdata = $convertblockdata[1][1];
-					}
-					break;
-				}elseif($convertblockdata[0][1] === $blockdata){
-					$blockid = $convertblockdata[1][0];
-					$blockdata = $convertblockdata[1][1];
-					break;
-				}
-			}
-		}
-		
 	}
 
 	public function generateChunk(){
@@ -76,26 +35,21 @@ class DesktopChunk{
 			$this->bitmap |= 0x01 << $num;
 
 			$palette = [];
-			$bitsperblock = 8;//TODO
+			$bitsperblock = 8;
 
 			$chunkdata = "";
-			$blocklight = "";
-			$skylight = "";
-
-			//TODO: rewrite code blocklight and skylight
+			$blocklightdata = "";
+			$skylightdata = "";
 
 			for($y = 0; $y < 16; ++$y){
 				for($z = 0; $z < 16; ++$z){
 					$data = "";
-					for($x = 0; $x < 8; ++$x){
+
+					for($x = 0; $x < 16; ++$x){
 						$blockid = $subChunk->getBlockId($x, $y, $z);
 						$blockdata = $subChunk->getBlockData($x, $y, $z);
 
-						//$blocklight .= $subChunk->getBlockLight($x, $y, $z);
-						//$skylight .= $subChunk->getBlockSkyLight($x, $y, $z);
-
-						$this->convertPEToPCBlockData($blockid, $blockdata);
-
+						ConvertUtils::convertBlockData(true, $blockid, $blockdata);
 						$block = (int) ($blockid << 4) | $blockdata;
 
 						if(($key = array_search($block, $palette, true)) !== false){
@@ -106,31 +60,14 @@ class DesktopChunk{
 
 							$data .= chr($key);//bit
 						}
-					}
-					$chunkdata .= strrev($data);
 
-					$data = "";
-					for($x = 8; $x < 16; ++$x){
-						$blockid = $subChunk->getBlockId($x, $y, $z);
-						$blockdata = $subChunk->getBlockData($x, $y, $z);
-
-						//$blocklight .= $subChunk->getBlockLight($x, $y, $z);
-						//$skylight .= $subChunk->getBlockSkyLight($x, $y, $z);
-
-						$this->convertPEToPCBlockData($blockid, $blockdata);
-
-						$block = (int) ($blockid << 4) | $blockdata;
-
-						if(($key = array_search($block, $palette, true)) !== false){
-							$data .= chr($key);//bit
-						}else{
-							$key = count($palette);
-							$palette[$key] = $block;
-
-							$data .= chr($key);//bit
+						if($x === 7 or $x === 15){//Reset ChunkData
+							$chunkdata .= strrev($data);
+							$blocklightdata .= str_repeat("\xff", 4);
+							$skylightdata .= str_repeat("\xff", 4);
+							$data = "";
 						}
 					}
-					$chunkdata .= strrev($data);
 				}
 			}
 
@@ -149,13 +86,11 @@ class DesktopChunk{
 			$payload .= $chunkdata;
 
 			/* Block Light*/
-			$payload .= $subChunk->getBlockLightArray();
-			//$payload .= $blocklight;
+			$payload .= $blocklightdata;
 
 			/* Sky Light Only overworld */
 			if($this->player->bigBrother_getDimension() === 0){
-				$payload .= $subChunk->getSkyLightArray();
-				//$payload .= $skylight;
+				$payload .= $skylightdata;
 			}
 		}
 

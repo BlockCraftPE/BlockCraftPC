@@ -31,17 +31,17 @@ class UpdateSignPacket extends Packet{
 	public $line4;
 
 	public function pid(){
-		return 0x33;
+		return 0x19;
 	}
 
 	public function encode(){
-		$this->putPosition($this->x, $this->y, $this->z);
-		$this->putString($this->line1);
-		$this->putString($this->line2);
-		$this->putString($this->line3);
-		$this->putString($this->line4);
 	}
 
 	public function decode(){
+		$this->getPosition($this->x, $this->y, $this->z);
+		$this->line1 = $this->getString();
+		$this->line2 = $this->getString();
+		$this->line3 = $this->getString();
+		$this->line4 = $this->getString();
 	}
 }

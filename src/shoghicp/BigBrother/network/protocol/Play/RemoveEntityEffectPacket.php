@@ -19,21 +19,18 @@ namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
 
-class BlockChangePacket extends Packet{
+class RemoveEntityEffectPacket extends Packet{
 
-	public $x;
-	public $y;
-	public $z;
-	public $blockId;
-	public $blockMeta;
+	public $eid;
+	public $effectId;
 
 	public function pid(){
-		return 0x0b;
+		return 0x31;
 	}
 
 	public function encode(){
-		$this->putPosition($this->x, $this->y, $this->z);
-		$this->putVarInt(($this->blockId << 4) | ($this->blockMeta & 15));
+		$this->putVarInt($this->eid);
+		$this->putVarInt($this->effectId);
 	}
 
 	public function decode(){

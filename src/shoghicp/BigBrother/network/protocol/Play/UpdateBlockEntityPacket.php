@@ -18,25 +18,26 @@
 namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
+use shoghicp\BigBrother\utils\Binary;
 
-class BlockChangePacket extends Packet{
+class UpdateBlockEntityPacket extends Packet{
 
 	public $x;
 	public $y;
 	public $z;
-	public $blockId;
-	public $blockMeta;
+	public $actionID;
+	public $namedtag = "";
 
 	public function pid(){
-		return 0x0b;
+		return 0x09;
 	}
 
 	public function encode(){
 		$this->putPosition($this->x, $this->y, $this->z);
-		$this->putVarInt(($this->blockId << 4) | ($this->blockMeta & 15));
+		$this->putByte($this->actionID);
+		$this->put($this->namedtag);
 	}
 
 	public function decode(){
-
 	}
 }

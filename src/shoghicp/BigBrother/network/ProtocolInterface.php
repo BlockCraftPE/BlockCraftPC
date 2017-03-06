@@ -29,7 +29,7 @@ use shoghicp\BigBrother\network\protocol\Login\EncryptionResponsePacket;
 use shoghicp\BigBrother\network\protocol\Login\LoginStartPacket;
 use shoghicp\BigBrother\network\protocol\Play\TeleportConfirmPacket;
 use shoghicp\BigBrother\network\protocol\Play\Client\AnimatePacket;
-use shoghicp\BigBrother\network\protocol\ClickWindowPacket;
+use shoghicp\BigBrother\network\protocol\Play\ClickWindowPacket;
 use shoghicp\BigBrother\network\protocol\Play\ClientSettingsPacket;
 use shoghicp\BigBrother\network\protocol\Play\ClientStatusPacket;
 use shoghicp\BigBrother\network\protocol\Play\CreativeInventoryActionPacket;
@@ -121,7 +121,11 @@ class ProtocolInterface implements SourceInterface{
 	}
 
 	protected function sendPacket($target, Packet $packet){
-		echo "[Send][Interface] 0x".bin2hex(chr($packet->pid()))."\n";
+		$id = bin2hex(chr($packet->pid()));
+		if($id !== "1f"){
+			echo "[Send][Interface] 0x".bin2hex(chr($packet->pid()))."\n";
+		}
+		
 		$data = chr(ServerManager::PACKET_SEND_PACKET) . Binary::writeInt($target) . $packet->write();
 		$this->thread->pushMainToThreadPacket($data);
 	}
@@ -184,7 +188,11 @@ class ProtocolInterface implements SourceInterface{
 	}
 
 	protected function handlePacket(DesktopPlayer $player, $payload){
-		//echo "[Receive][Interface] 0x".bin2hex(chr(ord($payload{0})))."\n";
+		$id = bin2hex(chr(ord($payload{0})));
+		if($id !== "0b"){//KeepAlivePacket
+			echo "[Receive][Interface] 0x".bin2hex(chr(ord($payload{0})))."\n";
+		}
+
 		$pid = ord($payload{0});
 		$offset = 1;
 
@@ -207,7 +215,8 @@ class ProtocolInterface implements SourceInterface{
 				case 0x04:
 					$pk = new ClientSettingsPacket();
 					break;
-
+				//0x05: Confirm Transaction
+				//0x06: Enchant Item
 				case 0x07:
 					$pk = new ClickWindowPacket();
 					break;
@@ -235,7 +244,8 @@ class ProtocolInterface implements SourceInterface{
 				case 0x0f:
 					$pk = new PlayerPacket();
 					break;
-
+				//0x10: Vehicle Move
+				//0x11: Steer Boat
 				case 0x12:
 					$pk = new PlayerAbilitiesPacket();
 					break;
@@ -245,7 +255,8 @@ class ProtocolInterface implements SourceInterface{
 				case 0x14:
 					$pk = new EntityActionPacket();
 					break;
-
+				//0x15: Steer Vehicle
+				//0x16: Resource Pack Status
 				case 0x17:
 					$pk = new HeldItemChangePacket();
 					break;

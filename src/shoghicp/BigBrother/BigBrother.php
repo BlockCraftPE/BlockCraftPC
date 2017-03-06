@@ -18,23 +18,20 @@
 namespace shoghicp\BigBrother;
 
 use pocketmine\plugin\PluginBase;
+use pocketmine\network\protocol\Info;
+use pocketmine\event\player\PlayerRespawnEvent;
+use pocketmine\event\Listener;
+use pocketmine\utils\TextFormat;
+use pocketmine\Achievement;
 
 use phpseclib\Crypt\RSA;
-use pocketmine\network\protocol\Info;
-use pocketmine\network\protocol\PlayerActionPacket;
 use shoghicp\BigBrother\network\Info as MCInfo;
 use shoghicp\BigBrother\network\ProtocolInterface;
 use shoghicp\BigBrother\network\translation\Translator;
 use shoghicp\BigBrother\network\translation\Translator_101;
 use shoghicp\BigBrother\network\protocol\Play\RespawnPacket;
-use shoghicp\BigBrother\network\protocol\Play\ResourcePackSendPacket;
-use pocketmine\utils\TextFormat;
-use pocketmine\block\Block;
-use pocketmine\math\Vector3;
-use pocketmine\tile\Sign;
-use pocketmine\Achievement;
 
-class BigBrother extends PluginBase{
+class BigBrother extends PluginBase implements Listener{
 
 	/** @var ProtocolInterface */
 	private $interface;
@@ -74,6 +71,8 @@ class BigBrother extends PluginBase{
 			$this->rsa = new RSA();
 
 			Achievement::add("openInventory", "Taking Inventory"); //this for DesktopPlayer
+
+			$this->getServer()->getPluginManager()->registerEvents($this, $this);
 
 			if($this->onlineMode){
 				$this->getLogger()->info("Server is being started in the background");
@@ -135,6 +134,23 @@ class BigBrother extends PluginBase{
 		return $this->rsa->decrypt($secret);
 	}
 
+	/**
+	 * @param PlayerRespawnEvent $event
+	 *
+	 * @priority NORMAL
+	 */
+	public function onRespawn(PlayerRespawnEvent $event){
+		$player = $event->getPlayer();
+		if($player instanceof DesktopPlayer and $player->getHealth() === 0){
+			$pk = new RespawnPacket();
+			$pk->dimension = $player->bigBrother_getDimension();
+			$pk->difficulty = $player->getServer()->getDifficulty();
+			$pk->gamemode = $player->getGamemode();
+			$pk->levelType = "default";
+			$player->putRawPacket($pk);
+		}
+	}
+
 	public static function toJSON($message, $source = "", $type = 1, $parameters = null){
 		if($source === null){
 			$source = "";
@@ -158,7 +174,11 @@ class BigBrother extends PluginBase{
 			if(str_replace("%", "", $message) === "commands.gamemode.success.self"){
 				$parameters = [$parameters[2]];
 			}elseif(str_replace("%", "", $message) === "commands.gamemode.success.other"){
-				$parameters = [$parameters[2], $parameters[3]];
+				if(count($parameters) === 2){
+					$parameters = [$parameters[0], $parameters[1]];
+				}else{
+					$parameters = [$parameters[1], $parameters[2]];
+				}
 			}
 
 			foreach($parameters as $num => $parameter){
@@ -173,6 +193,15 @@ class BigBrother extends PluginBase{
 			}
 			$result = json_encode($result, JSON_UNESCAPED_SLASHES);
 		}
+
+		$result = json_decode($result, true);
+		if(isset($result["extra"])){
+			if(count($result["extra"]) === 0){
+				unset($result["extra"]);
+			}
+		}
+		$result = json_encode($result, JSON_UNESCAPED_SLASHES);
+
 		return $result;
 	}
 
