@@ -19,6 +19,7 @@ namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
 use shoghicp\BigBrother\utils\Binary;
+use shoghicp\BigBrother\utils\ConvertUtils;
 
 class UpdateBlockEntityPacket extends Packet{
 
@@ -35,6 +36,7 @@ class UpdateBlockEntityPacket extends Packet{
 	public function encode(){
 		$this->putPosition($this->x, $this->y, $this->z);
 		$this->putByte($this->actionID);
+		ConvertUtils::convertNBTData(true, $this->namedtag);
 		$this->put($this->namedtag);
 	}
 

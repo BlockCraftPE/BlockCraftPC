@@ -21,6 +21,7 @@ use pocketmine\event\Timings;
 use pocketmine\level\Level;
 use pocketmine\network\protocol\Info;
 use pocketmine\network\protocol\LoginPacket;
+use pocketmine\network\protocol\RequestChunkRadiusPacket;
 use pocketmine\network\SourceInterface;
 use pocketmine\Player;
 use pocketmine\Server;
@@ -127,10 +128,9 @@ class DesktopPlayer extends Player{
 		$this->chunkLoadCount++;
 
 		$blockEntities = [];
-		/*foreach($this->level->getChunkTiles($x, $z) as $tile){
-			$blockEntities[] = $tile->getSpawnCompound()->write(true);
-		}*/
-
+		foreach($this->level->getChunkTiles($x, $z) as $tile){
+			$blockEntities[] = $tile->getSpawnCompound();
+		}
 
 		$chunk = new DesktopChunk($this, $x, $z);
 
@@ -246,6 +246,10 @@ class DesktopPlayer extends Player{
 				$pk->skin = $skin;
 			}
 
+			$this->handleDataPacket($pk);
+
+			$pk = new RequestChunkRadiusPacket();//for PocketMine-MP
+			$pk->radius = 8;
 			$this->handleDataPacket($pk);
 
 			$pk = new KeepAlivePacket();

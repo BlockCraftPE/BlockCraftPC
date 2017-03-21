@@ -18,22 +18,23 @@
 namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
+use shoghicp\BigBrother\utils\Binary;
 
-class EntityHeadLookPacket extends Packet{
+class OpenSignEditorPacket extends Packet{
 
-	public $eid;
-	public $yaw;
+	public $x;
+	public $y;
+	public $z;
 
 	public function pid(){
-		return 0x34;
+		return 0x2a;
 	}
 
 	public function encode(){
-		$this->putVarInt($this->eid);
-		$this->putByte((int) ($this->yaw * (256 / 360)));//TODO
+		$this->putPosition($this->x, $this->y, $this->z);
 	}
 
 	public function decode(){
-
+		
 	}
 }

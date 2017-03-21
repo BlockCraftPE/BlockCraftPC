@@ -47,6 +47,7 @@ use shoghicp\BigBrother\network\protocol\Play\Client\PlayerPositionAndLookPacket
 use shoghicp\BigBrother\network\protocol\Play\PlayerPositionPacket;
 use shoghicp\BigBrother\network\protocol\Play\Client\PluginMessagePacket;
 use shoghicp\BigBrother\network\protocol\Play\Client\TabCompletePacket;
+use shoghicp\BigBrother\network\protocol\Play\UpdateSignPacket;
 use shoghicp\BigBrother\network\protocol\Play\UseEntityPacket;
 use shoghicp\BigBrother\network\protocol\Play\UseItemPacket;
 use shoghicp\BigBrother\network\translation\Translator;
@@ -204,7 +205,7 @@ class ProtocolInterface implements SourceInterface{
 					$pk = new TeleportConfirmPacket();
 					break;
 				case 0x01:
-					$pk = new CTabCompletePacket();
+					$pk = new TabCompletePacket();
 					break;
 				case 0x02:
 					$pk = new ChatPacket();
@@ -262,6 +263,9 @@ class ProtocolInterface implements SourceInterface{
 					break;
 				case 0x18:
 					$pk = new CreativeInventoryActionPacket();
+					break;
+				case 0x19:
+					$pk = new UpdateSignPacket();
 					break;
 				case 0x1a:
 					$pk = new AnimatePacket();
