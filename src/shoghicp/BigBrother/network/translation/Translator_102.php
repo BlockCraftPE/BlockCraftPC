@@ -20,8 +20,11 @@ namespace shoghicp\BigBrother\network\translation;
 use pocketmine\Achievement;
 use pocketmine\Player;
 use pocketmine\entity\Entity;
+use pocketmine\entity\Arrow;
+use pocketmine\entity\Item as ItemEntity;
 use pocketmine\item\Item;
 use pocketmine\level\Level;
+use pocketmine\math\Vector3;
 use pocketmine\network\protocol\AnimatePacket;
 use pocketmine\network\protocol\BlockEntityDataPacket;
 use pocketmine\network\protocol\ContainerClosePacket;
@@ -31,6 +34,8 @@ use pocketmine\network\protocol\ContainerSetSlotPacket;
 use pocketmine\network\protocol\CraftingEventPacket;
 use pocketmine\network\protocol\DataPacket;
 use pocketmine\network\protocol\DropItemPacket;
+use pocketmine\network\protocol\EntityEventPacket;
+use pocketmine\network\protocol\LevelEventPacket;
 use pocketmine\network\protocol\Info;
 use pocketmine\network\protocol\InteractPacket;
 use pocketmine\network\protocol\TextPacket;
@@ -56,6 +61,7 @@ use shoghicp\BigBrother\network\Packet;
 use shoghicp\BigBrother\network\protocol\Login\LoginDisconnectPacket;
 use shoghicp\BigBrother\network\protocol\Play\Server\AnimatePacket as STCAnimatePacket;
 use shoghicp\BigBrother\network\protocol\Play\Server\KeepAlivePacket;
+use shoghicp\BigBrother\network\protocol\Play\BlockActionPacket;
 use shoghicp\BigBrother\network\protocol\Play\BlockChangePacket;
 use shoghicp\BigBrother\network\protocol\Play\BossBarPacket;
 use shoghicp\BigBrother\network\protocol\Play\ChangeGameStatePacket;
@@ -79,11 +85,14 @@ use shoghicp\BigBrother\network\protocol\Play\Server\TabComletePacket;
 use shoghicp\BigBrother\network\protocol\Play\ScoreboardObjectivePacket;
 use shoghicp\BigBrother\network\protocol\Play\ServerDifficultyPacket;
 use shoghicp\BigBrother\network\protocol\Play\SetSlotPacket;
+use shoghicp\BigBrother\network\protocol\Play\SoundEffectPacket;
 use shoghicp\BigBrother\network\protocol\Play\SpawnMobPacket;
 use shoghicp\BigBrother\network\protocol\Play\SpawnObjectPacket;
 use shoghicp\BigBrother\network\protocol\Play\SpawnPlayerPacket;
+use shoghicp\BigBrother\network\protocol\Play\SpawnPaintingPacket;
 use shoghicp\BigBrother\network\protocol\Play\SpawnPositionPacket;
 use shoghicp\BigBrother\network\protocol\Play\StatisticsPacket;
+use shoghicp\BigBrother\network\protocol\Play\SetPassengersPacket;
 use shoghicp\BigBrother\network\protocol\Play\SetExperiencePacket;
 use shoghicp\BigBrother\network\protocol\Play\RemoveEntityEffectPacket;
 use shoghicp\BigBrother\network\protocol\Play\Server\ChatPacket;
@@ -94,6 +103,7 @@ use shoghicp\BigBrother\network\protocol\Play\UpdateSignPacket;
 use shoghicp\BigBrother\network\protocol\Play\UpdateBlockEntityPacket;
 use shoghicp\BigBrother\network\protocol\Play\UseBedPacket;
 use shoghicp\BigBrother\network\protocol\Play\WindowItemsPacket;
+use shoghicp\BigBrother\network\protocol\Play\NamedSoundEffectPacket;
 use shoghicp\BigBrother\utils\Binary;
 use shoghicp\BigBrother\utils\ConvertUtils;
 
@@ -105,24 +115,9 @@ class Translator_102 implements Translator{
 				//Confirm
 				return null;
 
-			/*case 0x01: //TabCompletePacket
-				$pk = new STabComletePacket();
-
-				foreach($player->getServer()->getCommandMap()->getCommands() as $command){
-					if($command->testPermissionSilent($player)){
-						$pk->matches[] = $command->getName();
-					}
-				}
-
-				foreach($player->getServer()->getOnlinePlayers() as $packetplayer){
-					$pk->matches[] = $packetplayer->getName();
-				}
-
+			case 0x01: //TabCompletePacket
 				//TODO
-
-				//echo $packet->text."\n";
-
-				return $pk;*/
+				return null;
 
 			case 0x02: //ChatPacket
 				$pk = new TextPacket();
@@ -141,7 +136,7 @@ class Translator_102 implements Translator{
 						$found = false;
 						foreach($reflect->getConstants() as $constantname => $value){
 							if($constantname === "ACTION_RESPAWN"){
-								$pk->action = PlayerActionPacket::ACTION_RESPAWN;
+								$pk->action = PlayerActionPacket::ACTION_RESPAWN;//for PocketMine-MP
 								$found = true;
 								break;
 							}
@@ -192,13 +187,34 @@ class Translator_102 implements Translator{
 
 				return null;
 
-			case 0x09: //ClickWindowPacket
-				/*$pk = new ContainerSetSlotPacket();
+			case 0x07: //ClickWindowPacket
+				$pk = new ContainerSetSlotPacket();
+				$pk->windowid = $packet->windowID;
+				$pk->hotbarSlot = 0;//unused
+				$pk->item = $packet->clickedItem;
 
-				if($packet->slot > 4 and $packet->slot < 9){//Armor
-					$pk->windowid = ContainerSetContentPacket::SPECIAL_ARMOR;
+				switch($packet->mode){
+					case 0:
+						switch($packet->button){
+							case 0:
+								//var_dump($packet->slot);
+								//var_dump($packet);
+								//$pk->slot = $packet->slot - 5;
+							break;
+							/*case 1:
 
-					$pk->slot = $packet->slot - 5;
+							break;*/
+						}
+					break;
+					default:
+						echo "ClickWindowPacket: ".$packet->mode."\n";
+					break;
+				}
+
+
+				/*
+
+					
 				}else{//Inventory
 					$pk->windowid = 0;
 
@@ -210,8 +226,7 @@ class Translator_102 implements Translator{
 					}
 				}
 
-				$pk->hotbarSlot = 0;//unused
-				$pk->item = $packet->item;*/
+				*/
 				return null;
 
 			case 0x08: //CloseWindowPacket
@@ -239,7 +254,19 @@ class Translator_102 implements Translator{
 			case 0x0a: //UseEntityPacket
 				$pk = new InteractPacket();
 				$pk->target = $packet->target;
-				$pk->action = $packet->type;
+
+				switch($packet->type){
+					case 0://interact
+						$pk->action = InteractPacket::ACTION_RIGHT_CLICK;
+					break;
+					case 1://attack
+						$pk->action = InteractPacket::ACTION_LEFT_CLICK;
+					break;
+					case 2://interact at
+						$pk->action = InteractPacket::ACTION_MOUSEOVER;
+					break;
+				}
+
 				return $pk;
 
 			case 0x0b: //KeepAlivePacket
@@ -376,6 +403,24 @@ class Translator_102 implements Translator{
 						}else{
 							echo "PlayerDiggingPacket: ".$packet->status."\n";
 						}
+					break;
+					case 5:
+						$item = $player->getInventory()->getItemInHand();
+						if($item->getId() === Item::BOW){//Shoot Arrow
+							$pk = new PlayerActionPacket();
+							$pk->eid = 0;
+							$pk->action = PlayerActionPacket::ACTION_RELEASE_ITEM;
+							$pk->x = $packet->x;
+							$pk->y = $packet->y;
+							$pk->z = $packet->z;
+							$pk->face = $packet->face;
+						}else{//Eating
+							$pk = new EntityEventPacket();
+							$pk->eid = 0;
+							$pk->event = EntityEventPacket::USE_ITEM;
+						}
+
+						return $pk;
 					break;
 					default:
 						echo "PlayerDiggingPacket: ".$packet->status."\n";
@@ -601,7 +646,7 @@ class Translator_102 implements Translator{
 			case Info::SET_TIME_PACKET:
 				$pk = new TimeUpdatePacket();
 				$pk->age = $packet->time;
-				$pk->time = $packet->time; //TODO: calculate offset from MCPE
+				$pk->time = $packet->time;
 				return $pk;
 
 			case Info::START_GAME_PACKET:
@@ -645,6 +690,10 @@ class Translator_102 implements Translator{
 			case Info::ADD_PLAYER_PACKET:
 				$packets = [];
 
+				/*if(!($playerlist = $player->getSetting("PlayerList"))){
+					$playerlist = [];//TODO: Spawn Player problem...
+				}*/
+
 				$pk = new SpawnPlayerPacket();
 				$pk->eid = $packet->eid;
 				$pk->uuid = $packet->uuid->toBinary();
@@ -670,26 +719,240 @@ class Translator_102 implements Translator{
 			case Info::ADD_ENTITY_PACKET:
 				$packets = [];
 
+				$isobject = false;
+
 				switch($packet->type){
-					case 64:
+					case 10://Chicken
+						$packet->type = 93;
+					break;
+					case 11://Cow
+						$packet->type = 92;
+					break;
+					case 12://Pig
+						$packet->type = 90;
+					break;
+					case 13://Sheep
+						$packet->type = 91;
+					break;
+					case 14://Wolf
+						$packet->type = 95;
+					break;
+					case 15://Villager
+						$packet->type = 120;
+					break;
+					case 16://Mooshroom
+						$packet->type = 96;
+					break;
+					case 17://Squid
+						$packet->type = 94;
+					break;
+					case 18://Rabbit
+						$packet->type = 101;
+					break;
+					case 19://Bat
+						$packet->type = 65;
+					break;
+					case 20://IronGolem
+						$packet->type = 99;
+					break;
+					case 21://SnowGolem (Snowman)
+						$packet->type = 97;
+					break;
+					case 22://Ocelot
+						$packet->type = 98;
+					break;
+					case 23://Horse
+						$packet->type = 100;
+					break;
+					case 28://PolarBear
+						$packet->type = 102;
+					break;
+					case 32://Zombie
+						$packet->type = 54;
+					break;
+					case 33://Creeper
+						$packet->type = 50;
+					break;
+					case 34://Skeleton
+						$packet->type = 51;
+					break;
+					case 35://Spider
+						$packet->type = 52;
+					break;
+					case 36://PigZombie
 						$packet->type = 57;
 					break;
+					case 37://Slime
+						$packet->type = 55;
+					break;
+					case 38://Enderman
+						$packet->type = 58;
+					break;
+					case 39://Silverfish
+						$packet->type = 60;
+					break;
+					case 40://CaveSpider
+						$packet->type = 59;
+					break;
+					case 41://Ghast
+						$packet->type = 56;
+					break;
+					case 42://LavaSlime
+						$packet->type = 62;
+					break;
+					case 43://Blaze
+						$packet->type = 61;
+					break;
+					case 44://ZombieVillager
+						$packet->type = 27;
+					break;
+					case 45://Witch
+						$packet->type = 66;
+					break;
+					case 46://Stray
+						$packet->type = 6;
+					break;
+					case 47://Husk
+						$packet->type = 23;
+					break;
+					case 48://WitherSkeleton
+						$packet->type = 5;
+					break;
+					case 49://Guardian
+						$packet->type = 68;
+					break;
+					case 50://ElderGuardian
+						$packet->type = 4;
+					break;
+					/*case 52://Wither (Skull)
+						//Spawn Object
+					break;*/
+					case 53://EnderDragon
+						$packet->type = 63;
+					break;
+					case 54://Shulker
+						$packet->type = 69;
+					break;
+					/*case 64://Item
+						//Spawn Object
+					break;*/
+					case 65://PrimedTNT
+						//Spawn Object
+						$isobject = true;
+						$packet->type = 50;
+					break;
+					case 66://FallingSand
+						//Spawn Object
+						$isobject = true;
+						$packet->type = 70;
+					break;
+					/*case 68://ThrownExpBottle
+						//Spawn Object
+					break;
+					case 69://XPOrb
+						//Spawn Experience Orb
+					break;
+					case 71://EnderCrystal
+						//Spawn Object
+					break;
+					case 76://ShulkerBullet
+						//Spawn Object
+					break;*/
+					case 77://FishingHook
+						//Spawn Object
+						$isobject = true;
+						$packet->type = 90;
+					break;
+					/*case 79://DragonFireBall
+						//Spawn Object
+					break;*/
+					case 80://Arrow
+						//Spawn Object
+						$isobject = true;
+						$packet->type = 60;
+					break;
+					case 81://Snowball
+						//Spawn Object
+						$isobject = true;
+						$packet->type = 61;
+					break;
+					case 82://Egg
+						//Spawn Object
+						$isobject = true;
+						$packet->type = 62;
+					break;
+					/*case 83://Painting
+						//Spawn Painting
+					break;
+					case 84://Minecart
+						//Spawn Object
+					break;
+					case 85://GhastFireball
+						//Spawn Object
+					break;
+					case 86://ThrownPotion
+						//Spawn Object
+					break;
+					case 87://EnderPearl
+						//Spawn Object
+					break;
+					case 88://LeashKnot
+						//Spawn Object
+					break;
+					case 89://BlueWitherSkull
+						//Spawn Object
+					break;*/
+					case 90;//Boat
+						$packet->type = 1;
+					break;
+					/*case 93://Lightning
+						//Spawn Global Entity
+					break;
+					case 94://BlazeFireball
+						//Spawn Object
+					break;
+					case 96://MinecartHopper
+						//Spawn Object
+					break;
+					case 97:MinecartTNT
+						//Spawn Object
+					break;
+					case 98://MinecartChest
+						//Spawn Object
+					break;*/
 					default:
 						$packet->type = 57;
 						echo "AddEntityPacket: ".$packet->eid."\n";
 					break;
 				}
 
-				$pk = new SpawnMobPacket();
-				$pk->eid = $packet->eid;
-				$pk->type = $packet->type;
-				$pk->uuid = UUID::fromRandom()->toBinary();
-				$pk->x = $packet->x;
-				$pk->z = $packet->z;
-				$pk->y = $packet->y;
-				$pk->yaw = $packet->yaw;
-				$pk->pitch = $packet->pitch;
-				$pk->metadata = $packet->metadata;
+				if($isobject){
+					$pk = new SpawnObjectPacket();
+					$pk->eid = $packet->eid;
+					$pk->type = $packet->type;
+					$pk->uuid = UUID::fromRandom()->toBinary();
+					$pk->x = $packet->x;
+					$pk->y = $packet->y;
+					$pk->z = $packet->z;
+					$pk->yaw = 0;
+					$pk->pitch = 0;
+					$pk->data = 1;
+					$pk->velocityX = 0;
+					$pk->velocityY = 0;
+					$pk->velocityZ = 0;
+				}else{
+					$pk = new SpawnMobPacket();
+					$pk->eid = $packet->eid;
+					$pk->type = $packet->type;
+					$pk->uuid = UUID::fromRandom()->toBinary();
+					$pk->x = $packet->x;
+					$pk->z = $packet->z;
+					$pk->y = $packet->y;
+					$pk->yaw = $packet->yaw;
+					$pk->pitch = $packet->pitch;
+					$pk->metadata = $packet->metadata;
+				}
+				
 				$packets[] = $pk;
 
 				$pk = new EntityTeleportPacket();
@@ -709,7 +972,7 @@ class Translator_102 implements Translator{
 				return $pk;
 
 			case Info::ADD_ITEM_ENTITY_PACKET://Bug
-				echo "AddItemEntityPacket\n";
+				//echo "AddItemEntityPacket: ".$packet->eid."\n";
 
 				$item = clone $packet->item;
 				ConvertUtils::convertItemData(true, $item);
@@ -743,10 +1006,10 @@ class Translator_102 implements Translator{
 				return $packets;
 
 			case Info::TAKE_ITEM_ENTITY_PACKET:
-				if(($entity = $player->getLevel()->getEntity($packet->target))){
+				$itemCount = 1;
+
+				if(($entity = $player->getLevel()->getEntity($packet->target)) instanceof ItemEntity){
 					$itemCount = $entity->getItem()->getCount();
-				}else{
-					$itemCount = 1;
 				}
 
 				$pk = new CollectItemPacket();
@@ -760,6 +1023,8 @@ class Translator_102 implements Translator{
 				if($packet->eid === $player->getId()){//TODO
 					return null;
 				}else{
+					//echo "MoveEntityPacket: ".$packet->eid."\n";
+
 					$packets = [];
 
 					$pk = new EntityTeleportPacket();
@@ -820,21 +1085,134 @@ class Translator_102 implements Translator{
 				$pk->blockMeta = $packet->blockData;
 				return $pk;
 
-			case Info::LEVEL_EVENT_PACKET:
-				$pk = new EffectPacket();
-				$pk->effectId = $packet->evid;
+			/*case Info::ADD_PAINTING_PACKET://Bug
+				$pk = new SpawnPaintingPacket();
+				$pk->eid = $packet->eid;
+				$pk->uuid = UUID::fromRandom()->toBinary();
+				$pk->title = $packet->title;
 				$pk->x = $packet->x;
 				$pk->y = $packet->y;
 				$pk->z = $packet->z;
-				$pk->data = $packet->data;
-				$pk->disableRelativeVolume = false;
+				$pk->direction = $packet->direction;
+
+				//var_dump($pk);
+
+				return $pk;*/
+
+			case Info::LEVEL_EVENT_PACKET://TODO
+				$issoundeffect = false;
+
+				switch($packet->evid){//EVENT_ADD_PARTICLE_MASK
+					case LevelEventPacket::EVENT_SOUND_SHOOT:
+						$issoundeffect = true;
+						$category = 0;
+
+						switch(($id = $player->getInventory()->getItemInHand()->getId())){
+							case Item::SNOWBALL:
+								$name = "entity.snowball.throw";
+							break;
+							case Item::EGG:
+								$name = "entity.egg.throw";
+							break;
+							case Item::ENCHANTING_BOTTLE:
+								$name = "entity.experience_bottle.throw";
+							break;
+							case Item::SPLASH_POTION:
+								$name = "entity.splash_potion.throw";
+							break;
+							case Item::ENDER_PEARL:
+								$name = "entity.enderpearl.throw";
+							break;
+							default:
+								echo "LevelEventPacket: ".$id."\n";
+							break;
+						}
+					break;
+					default:
+						echo "LevelEventPacket: ".$packet->evid."\n";
+					break;
+				}
+
+
+				if($issoundeffect){
+					$pk = new NamedSoundEffectPacket();
+					$pk->category = $category;
+					$pk->x = $packet->x;
+					$pk->y = $packet->y;
+					$pk->z = $packet->z;
+					$pk->volume = 0.5;
+					$pk->pitch = 1.0;
+					$pk->name = $name;
+				}else{
+					$pk = new EffectPacket();
+					$pk->effectId = $packet->evid;
+					$pk->x = $packet->x;
+					$pk->y = $packet->y;
+					$pk->z = $packet->z;
+					$pk->data = $packet->data;
+					$pk->disableRelativeVolume = false;
+				}
 
 				return $pk;
 
-			/*case Info::ENTITY_EVENT_PACKET:
+			case Info::BLOCK_EVENT_PACKET:
+				$packets = [];
+
+				$pk = new BlockActionPacket();
+				$pk->x = $packet->x;
+				$pk->y = $packet->y;
+				$pk->z = $packet->z;
+				$pk->actionID = $packet->case1;
+				$pk->actionParam = $packet->case2;
+				$pk->blockType = $player->getLevel()->getBlock(new Vector3($packet->x, $packet->y, $packet->z))->getId();
+				$packets[] = $pk;
+
+				if($packet->case1 === 1){//TODO: EnderChest
+					$pk = new NamedSoundEffectPacket();
+					$pk->category = 1;
+					$pk->x = $packet->x;
+					$pk->y = $packet->y;
+					$pk->z = $packet->z;
+					$pk->volume = 0.5;
+					$pk->pitch = 1.0;
+
+					if($packet->case2 >= 1){
+						$pk->name = "block.chest.open";
+					}else{
+						$pk->name = "block.chest.close";
+					}
+
+					$packets[] = $pk;
+				}
+
+				return $packets;
+
+			case Info::ENTITY_EVENT_PACKET:
+				switch($packet->event){
+					case EntityEventPacket::HURT_ANIMATION:
+						$pk = new STCAnimatePacket();
+						$pk->actionID = 1;
+						$pk->eid = $packet->eid;
+
+						return $pk;
+					break;
+					/*case EntityEventPacket::DEATH_ANIMATION:
+						$pk = new STCAnimatePacket();
+						$pk->actionID = 1;
+						$pk->eid = $packet->eid;
+
+						var_dump($pk);
+						return $pk;
+					break;*/
+					case EntityEventPacket::RESPAWN:
+						//unused
+					break;
+					default:
+						echo "EntityEventPacket: ".$packet->event."\n";
+					break;
+				}
 
 				return null;
-			*/
 
 			case Info::MOB_EFFECT_PACKET:
 				switch($packet->eventId){
@@ -844,7 +1222,6 @@ class Translator_102 implements Translator{
 						if($packet->particles){
 							$flags |= 0x02;
 						}
-
 
 						$pk = new EntityEffectPacket();
 						$pk->eid = $packet->eid;
@@ -1009,6 +1386,12 @@ class Translator_102 implements Translator{
 				$pk->velocityZ = $packet->motionZ;
 				return $pk;
 
+			/*case Info::SET_ENTITY_LINK_PACKET:
+				$pk = new SetPassengersPacket();
+				$pk->eid = $packet->from;
+				$pk->passengers = [$packet->to];
+				return $pk;*/
+
 			case Info::SET_HEALTH_PACKET:
 				$pk = new UpdateHealthPacket();
 				$pk->health = $packet->health;//TODO: Default Value
@@ -1052,7 +1435,7 @@ class Translator_102 implements Translator{
 					break;
 					case 1:
 						$type = "minecraft:crafting_table";
-						$title = "CraftingTable Inventory";
+						$title = "Crafting Table Inventory";
 					break;
 					case 2:
 						$type = "minecraft:furnace";
@@ -1087,6 +1470,10 @@ class Translator_102 implements Translator{
 					case ContainerSetContentPacket::SPECIAL_INVENTORY:
 						$pk->slot = $packet->slot + 18;
 						$pk->item = $packet->item;
+
+						var_dump($pk);
+
+						return $pk;
 					case ContainerSetContentPacket::SPECIAL_ARMOR:
 						//TODO
 					break;
@@ -1488,7 +1875,6 @@ class Translator_102 implements Translator{
 			case Info::RESPAWN_PACKET:
 			case Info::ADVENTURE_SETTINGS_PACKET:
 			case Info::FULL_CHUNK_DATA_PACKET:
-			case Info::BLOCK_EVENT_PACKET:
 			case Info::CHUNK_RADIUS_UPDATED_PACKET:
 			case Info::AVAILABLE_COMMANDS_PACKET:
 				return null;

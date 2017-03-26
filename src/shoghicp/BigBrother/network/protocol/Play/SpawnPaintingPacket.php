@@ -15,22 +15,33 @@
  * GNU General Public License for more details.
 */
 
-namespace shoghicp\BigBrother\network\protocol\Play\Client;
+namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
 
-class HeldItemChangePacket extends Packet{
+class SpawnPaintingPacket extends Packet{
 
-	public $selectedSlot;
+	public $eid;
+	public $uuid;
+	public $title;
+	public $x;
+	public $y;
+	public $z;
+	public $direction;
 
 	public function pid(){
-		return 0x17;
+		return 0x04;
 	}
 
 	public function encode(){
+		$this->putVarInt($this->eid);
+		$this->put($this->uuid);
+		$this->putString($this->title);
+		$this->putPosition($this->x, $this->y, $this->z);
+		$this->putByte($this->direction);
 	}
 
 	public function decode(){
-		$this->selectedSlot = $this->getShort();
+		
 	}
 }

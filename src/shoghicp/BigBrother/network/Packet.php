@@ -84,7 +84,7 @@ abstract class Packet extends \stdClass{
 				$nbt = $this->get($len);
 			}
 
-			$item = new ComputerItem($itemId, $damage, $count, $nbt);
+			$item = new ComputerItem($itemId, $damage, $count/*, $nbt*/);//TODO: Convert NBT
 
 			ConvertUtils::convertItemData(false, $item);
 
@@ -103,7 +103,7 @@ abstract class Packet extends \stdClass{
 			$this->putShort($item->getDamage());
 
 			$nbt = new NBT(NBT::LITTLE_ENDIAN);
-			$nbt->read($item->getCompoundTag());
+			$nbt->read($item->getCompoundTag());//TODO String or CompoundTag
 			$nbt = $nbt->getData();
 
 			if($nbt->getType() !== NBT::TAG_End){

@@ -15,22 +15,28 @@
  * GNU General Public License for more details.
 */
 
-namespace shoghicp\BigBrother\network\protocol\Play\Client;
+namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
 
-class HeldItemChangePacket extends Packet{
+class SetPassengersPacket extends Packet{
 
-	public $selectedSlot;
+	public $eid;
+	public $passengers = [];
 
 	public function pid(){
-		return 0x17;
+		return 0x40;
 	}
 
 	public function encode(){
+		$this->putVarInt($this->eid);
+		$this->putVarInt(count($this->passengers));
+		foreach($this->passengers as $passenger){
+			$this->putVarInt($passenger);
+		}
 	}
 
 	public function decode(){
-		$this->selectedSlot = $this->getShort();
+
 	}
 }
