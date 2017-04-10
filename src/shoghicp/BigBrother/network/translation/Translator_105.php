@@ -23,6 +23,7 @@ use pocketmine\entity\Entity;
 use pocketmine\entity\Arrow;
 use pocketmine\entity\Item as ItemEntity;
 use pocketmine\item\Item;
+use pocketmine\block\Block;
 use pocketmine\level\Level;
 use pocketmine\math\Vector3;
 use pocketmine\network\protocol\AnimatePacket;
@@ -70,6 +71,7 @@ use shoghicp\BigBrother\network\protocol\Play\DestroyEntitiesPacket;
 use shoghicp\BigBrother\network\protocol\Play\EffectPacket;
 use shoghicp\BigBrother\network\protocol\Play\EntityEquipmentPacket;
 use shoghicp\BigBrother\network\protocol\Play\EntityEffectPacket;
+use shoghicp\BigBrother\network\protocol\Play\EntityStatusPacket;
 use shoghicp\BigBrother\network\protocol\Play\EntityHeadLookPacket;
 use shoghicp\BigBrother\network\protocol\Play\EntityMetadataPacket;
 use shoghicp\BigBrother\network\protocol\Play\EntityTeleportPacket;
@@ -107,7 +109,7 @@ use shoghicp\BigBrother\network\protocol\Play\NamedSoundEffectPacket;
 use shoghicp\BigBrother\utils\Binary;
 use shoghicp\BigBrother\utils\ConvertUtils;
 
-class Translator_102 implements Translator{
+class Translator_105 implements Translator{
 
 	public function interfaceToServer(DesktopPlayer $player, Packet $packet){
 		switch($packet->pid()){
@@ -690,10 +692,6 @@ class Translator_102 implements Translator{
 			case Info::ADD_PLAYER_PACKET:
 				$packets = [];
 
-				/*if(!($playerlist = $player->getSetting("PlayerList"))){
-					$playerlist = [];//TODO: Spawn Player problem...
-				}*/
-
 				$pk = new SpawnPlayerPacket();
 				$pk->eid = $packet->eid;
 				$pk->uuid = $packet->uuid->toBinary();
@@ -1102,7 +1100,11 @@ class Translator_102 implements Translator{
 			case Info::LEVEL_EVENT_PACKET://TODO
 				$issoundeffect = false;
 
-				switch($packet->evid){//EVENT_ADD_PARTICLE_MASK
+				if($packet->evid & LevelEventPacket::EVENT_ADD_PARTICLE_MASK){
+					$packet->evid &= ~LevelEventPacket::EVENT_ADD_PARTICLE_MASK;
+				}
+
+				switch($packet->evid){
 					case LevelEventPacket::EVENT_SOUND_SHOOT:
 						$issoundeffect = true;
 						$category = 0;
@@ -1164,7 +1166,7 @@ class Translator_102 implements Translator{
 				$pk->z = $packet->z;
 				$pk->actionID = $packet->case1;
 				$pk->actionParam = $packet->case2;
-				$pk->blockType = $player->getLevel()->getBlock(new Vector3($packet->x, $packet->y, $packet->z))->getId();
+				$pk->blockType = $block = $player->getLevel()->getBlock(new Vector3($packet->x, $packet->y, $packet->z))->getId();
 				$packets[] = $pk;
 
 				if($packet->case1 === 1){//TODO: EnderChest
@@ -1177,9 +1179,17 @@ class Translator_102 implements Translator{
 					$pk->pitch = 1.0;
 
 					if($packet->case2 >= 1){
-						$pk->name = "block.chest.open";
+						if($block === Block::ENDER_CHEST){
+							$pk->name = "block.enderchest.open";
+						}else{
+							$pk->name = "block.chest.open";
+						}
 					}else{
-						$pk->name = "block.chest.close";
+						if($block === Block::ENDER_CHEST){
+							$pk->name = "block.enderchest.close";
+						}else{
+							$pk->name = "block.chest.close";
+						}
 					}
 
 					$packets[] = $pk;
@@ -1190,20 +1200,23 @@ class Translator_102 implements Translator{
 			case Info::ENTITY_EVENT_PACKET:
 				switch($packet->event){
 					case EntityEventPacket::HURT_ANIMATION:
-						$pk = new STCAnimatePacket();
-						$pk->actionID = 1;
+						$pk = new EntityStatusPacket();
+						$pk->status = 2;
 						$pk->eid = $packet->eid;
+
+						//TODO: sound
 
 						return $pk;
 					break;
-					/*case EntityEventPacket::DEATH_ANIMATION:
-						$pk = new STCAnimatePacket();
-						$pk->actionID = 1;
+					case EntityEventPacket::DEATH_ANIMATION:
+						$pk = new EntityStatusPacket();
+						$pk->status = 3;
 						$pk->eid = $packet->eid;
 
-						var_dump($pk);
+						//TODO: sound
+
 						return $pk;
-					break;*/
+					break;
 					case EntityEventPacket::RESPAWN:
 						//unused
 					break;
@@ -1444,6 +1457,7 @@ class Translator_102 implements Translator{
 					default:
 						echo "ContainerOpenPacket: ".$packet->type."\n";
 						//TODO: http://wiki.vg/Inventory#Windows
+						$title = "Unknown Inventory";
 					break;
 				}
 
@@ -1460,6 +1474,9 @@ class Translator_102 implements Translator{
 			case Info::CONTAINER_CLOSE_PACKET:
 				$pk = new CloseWindowPacket();
 				$pk->windowID = $packet->windowid;
+
+				$player->removeSetting("windowid:".$packet->windowid);
+
 				return $pk;
 
 			case Info::CONTAINER_SET_SLOT_PACKET:
@@ -1468,8 +1485,14 @@ class Translator_102 implements Translator{
 
 				switch($packet->windowid){
 					case ContainerSetContentPacket::SPECIAL_INVENTORY:
+
+
+
+
 						$pk->slot = $packet->slot + 18;
 						$pk->item = $packet->item;
+
+						//
 
 						var_dump($pk);
 
@@ -1516,21 +1539,21 @@ class Translator_102 implements Translator{
 							if(!isset($hotbar[$i])){
 								$pk->items[] = $player->getInventory()->getItem($i);
 							}else{
-								$pk->items[] = Item::get(Item::AIR, 0, 0);
+								$pk->items[] = $hotbar[$i];//dummy item 
 							}
 						}
 
 						foreach($hotbar as $slot){
-							$pk->items[] = $slot;
+							$pk->items[] = $slot;//hotbar
 						}
 
 						$pk->items[] = Item::get(Item::AIR, 0, 0);//off hand
 
 						return $pk;
 					break;
-					case ContainerSetContentPacket::SPECIAL_ARMOR:
+					/*case ContainerSetContentPacket::SPECIAL_ARMOR:
 						//TODO
-					break;
+					break;*/
 					case ContainerSetContentPacket::SPECIAL_CREATIVE:
 					case ContainerSetContentPacket::SPECIAL_HOTBAR:
 					break;
@@ -1556,7 +1579,7 @@ class Translator_102 implements Translator{
 										if(!isset($hotbar[$i])){
 											$pk->items[] = $player->getInventory()->getItem($i);
 										}else{
-											$pk->items[] = Item::get(Item::AIR, 0, 0);
+											$pk->items[] = $hotbar[$i];
 										}
 									}
 
