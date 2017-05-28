@@ -7,10 +7,10 @@ port: 25565
 network-compression-threshold: 256
 
 #Sets the server description on the server list
-motd: "§9GameCraftPE on PC!"
+motd: "§9BlockCraftPE on PC!"
 
 #Use Mojang services to authenticate players
-online-mode: true
+online-mode: false
 
 #This is Skin Settings
 skin-yml: "steve.yml"
