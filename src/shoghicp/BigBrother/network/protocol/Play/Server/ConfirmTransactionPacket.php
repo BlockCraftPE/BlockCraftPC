@@ -15,27 +15,27 @@
  * GNU General Public License for more details.
 */
 
-namespace shoghicp\BigBrother\network\translation;
+namespace shoghicp\BigBrother\network\protocol\Play\Server;
 
-use pocketmine\network\protocol\DataPacket;
-use shoghicp\BigBrother\DesktopPlayer;
 use shoghicp\BigBrother\network\Packet;
 
-interface Translator{
+class ConfirmTransactionPacket extends Packet{
 
-	/**
-	 * @param DesktopPlayer     $player
-	 * @param DataPacket $packet
-	 *
-	 * @return null|Packet|Packet[]
-	 */
-	public function serverToInterface(DesktopPlayer $player, DataPacket $packet);
+	public $windowID;
+	public $actionNumber;
+	public $accepted;
 
-	/**
-	 * @param DesktopPlayer $player
-	 * @param Packet $packet
-	 *
-	 * @return null|DataPacket|DataPacket[]
-	 */
-	public function interfaceToServer(DesktopPlayer $player, Packet $packet);
+	public function pid(){
+		return 0x11;
+	}
+
+	public function encode(){
+		$this->putByte($this->windowID);
+		$this->putShort($this->actionNumber);
+		$this->putByte($this->accepted > 0);
+	}
+
+	public function decode(){
+		
+	}
 }

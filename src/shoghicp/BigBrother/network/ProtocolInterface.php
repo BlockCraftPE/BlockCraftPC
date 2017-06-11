@@ -17,7 +17,7 @@
 
 namespace shoghicp\BigBrother\network;
 
-use pocketmine\network\protocol\DataPacket;
+use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\SourceInterface;
 use pocketmine\Player;
 use pocketmine\utils\MainLogger;
@@ -27,8 +27,10 @@ use shoghicp\BigBrother\network\Info; //Computer Edition
 use shoghicp\BigBrother\network\Packet;
 use shoghicp\BigBrother\network\protocol\Login\EncryptionResponsePacket;
 use shoghicp\BigBrother\network\protocol\Login\LoginStartPacket;
+use shoghicp\BigBrother\network\protocol\Play\EnchantItemPacket;
 use shoghicp\BigBrother\network\protocol\Play\TeleportConfirmPacket;
 use shoghicp\BigBrother\network\protocol\Play\Client\AnimatePacket;
+use shoghicp\BigBrother\network\protocol\Play\Client\ConfirmTransactionPacket;
 use shoghicp\BigBrother\network\protocol\Play\ClickWindowPacket;
 use shoghicp\BigBrother\network\protocol\Play\ClientSettingsPacket;
 use shoghicp\BigBrother\network\protocol\Play\ClientStatusPacket;
@@ -50,7 +52,6 @@ use shoghicp\BigBrother\network\protocol\Play\Client\TabCompletePacket;
 use shoghicp\BigBrother\network\protocol\Play\UpdateSignPacket;
 use shoghicp\BigBrother\network\protocol\Play\UseEntityPacket;
 use shoghicp\BigBrother\network\protocol\Play\UseItemPacket;
-use shoghicp\BigBrother\network\translation\Translator;
 use shoghicp\BigBrother\utils\Binary;
 
 class ProtocolInterface implements SourceInterface{
@@ -75,7 +76,7 @@ class ProtocolInterface implements SourceInterface{
 
 	private $threshold = null;
 
-	public function __construct(BigBrother $plugin, $server, Translator $translator, $threshold){
+	public function __construct(BigBrother $plugin, $server, $translator, $threshold){
 		$this->plugin = $plugin;
 		$this->server = $server;
 		$this->translator = $translator;
@@ -204,77 +205,84 @@ class ProtocolInterface implements SourceInterface{
 				case 0x00:
 					$pk = new TeleportConfirmPacket();
 					break;
-				case 0x01:
+				//0x01: Prepare Crafting Grid
+				case 0x02:
 					$pk = new TabCompletePacket();
 					break;
-				case 0x02:
+				case 0x03:
 					$pk = new ChatPacket();
 					break;
-				case 0x03:
+				case 0x04:
 					$pk = new ClientStatusPacket();
 					break;
-				case 0x04:
+				case 0x05:
 					$pk = new ClientSettingsPacket();
 					break;
-				//0x05: Confirm Transaction
-				//0x06: Enchant Item
+				case 0x06:
+					$pk = new ConfirmTransactionPacket();
+					break;
 				case 0x07:
-					$pk = new ClickWindowPacket();
+					$pk = new EnchantItemPacket();
 					break;
 				case 0x08:
-					$pk = new CloseWindowPacket();
+					$pk = new ClickWindowPacket();
 					break;
 				case 0x09:
-					$pk = new PluginMessagePacket();
+					$pk = new CloseWindowPacket();
 					break;
 				case 0x0a:
-					$pk = new UseEntityPacket();
+					$pk = new PluginMessagePacket();
 					break;
 				case 0x0b:
-					$pk = new KeepAlivePacket();
+					$pk = new UseEntityPacket();
 					break;
 				case 0x0c:
-					$pk = new PlayerPositionPacket();
+					$pk = new KeepAlivePacket();
 					break;
 				case 0x0d:
-					$pk = new PlayerPositionAndLookPacket();
-					break;
-				case 0x0e:
-					$pk = new PlayerLookPacket();
-					break;
-				case 0x0f:
 					$pk = new PlayerPacket();
 					break;
-				//0x10: Vehicle Move
-				//0x11: Steer Boat
-				case 0x12:
+				case 0x0e:
+					$pk = new PlayerPositionPacket();
+					break;
+				case 0x0f:
+					$pk = new PlayerPositionAndLookPacket();
+					break;
+				case 0x10:
+					$pk = new PlayerLookPacket();
+					break;
+				//0x11: Vehicle Move
+				//0x12: Steer Boat
+				case 0x13:
 					$pk = new PlayerAbilitiesPacket();
 					break;
-				case 0x13:
+				case 0x14:
 					$pk = new PlayerDiggingPacket();
 					break;
-				case 0x14:
+				case 0x15:
 					$pk = new EntityActionPacket();
 					break;
-				//0x15: Steer Vehicle
-				//0x16: Resource Pack Status
-				case 0x17:
+				//0x16: Steer Vehicle
+				//0x17: Crafting Book Data
+				//0x18: Resource Pack Status
+				//0x19: Advancement Tab
+				case 0x1a:
 					$pk = new HeldItemChangePacket();
 					break;
-				case 0x18:
+				case 0x1b:
 					$pk = new CreativeInventoryActionPacket();
 					break;
-				case 0x19:
+				case 0x1c:
 					$pk = new UpdateSignPacket();
 					break;
-				case 0x1a:
+				case 0x1d:
 					$pk = new AnimatePacket();
 					break;
-				//0x1b: Spectate
-				case 0x1c:
+				//0x1e: Spectate
+				case 0x1f:
 					$pk = new PlayerBlockPlacementPacket();
 					break;
-				case 0x1d:
+				case 0x20:
 					$pk = new UseItemPacket();
 					break;
 				default:

@@ -25,12 +25,7 @@ class DesktopChunk{
 		$chunk = $this->provider->getChunk($this->chunkX, $this->chunkZ, false);
 		$this->biomes = $chunk->getBiomeIdArray();
 
-		//mcregion and anvil is support
-		//pmanvil ?
-		//var_dump($this->provider->getProviderName());
-
 		$payload = "";
-
 		foreach($chunk->getSubChunks() as $num => $subChunk){
 			if($subChunk->isEmpty()){
 				continue;
@@ -76,15 +71,15 @@ class DesktopChunk{
 			}
 
 			/* Bits Per Block & Palette Length */
-			$payload .= Binary::writeByte($bitsperblock).Binary::writeVarInt(count($palette));
+			$payload .= Binary::writeByte($bitsperblock).Binary::writeComputerVarInt(count($palette));
 
 			/* Palette */
 			foreach($palette as $num => $value){
-				$payload .= Binary::writeVarInt($value);
+				$payload .= Binary::writeComputerVarInt($value);
 			}
 
 			/* Data Array Length */
-			$payload .= Binary::writeVarInt(strlen($chunkdata) / 8);
+			$payload .= Binary::writeComputerVarInt(strlen($chunkdata) / 8);
 
 			/* Data Array */
 			$payload .= $chunkdata;

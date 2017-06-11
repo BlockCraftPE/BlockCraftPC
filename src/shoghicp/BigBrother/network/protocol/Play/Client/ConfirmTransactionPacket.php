@@ -19,19 +19,23 @@ namespace shoghicp\BigBrother\network\protocol\Play\Client;
 
 use shoghicp\BigBrother\network\Packet;
 
-class KeepAlivePacket extends Packet{
+class ConfirmTransactionPacket extends Packet{
 
-	public $id;
+	public $windowID;
+	public $actionNumber;
+	public $accepted;
 
 	public function pid(){
-		return 0x0c;
+		return 0x06;
 	}
 
 	public function encode(){
-		
+
 	}
 
 	public function decode(){
-		$this->id = $this->getVarInt();
+		$this->windowID = $this->getByte();
+		$this->actionNumber = $this->getShort();
+		$this->accepted = $this->getByte() > 0;
 	}
 }

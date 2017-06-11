@@ -18,10 +18,13 @@
 namespace shoghicp\BigBrother;
 
 use pocketmine\event\Timings;
+use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\level\Level;
-use pocketmine\network\protocol\Info;
-use pocketmine\network\protocol\LoginPacket;
-use pocketmine\network\protocol\RequestChunkRadiusPacket;
+use pocketmine\network\mcpe\protocol\ProtocolInfo as Info;
+use pocketmine\network\mcpe\protocol\LoginPacket;
+use pocketmine\network\mcpe\protocol\RequestChunkRadiusPacket;
+use pocketmine\network\mcpe\protocol\ResourcePackClientResponsePacket;
+use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\SourceInterface;
 use pocketmine\Player;
 use pocketmine\Server;
@@ -39,6 +42,7 @@ use shoghicp\BigBrother\network\protocol\Play\PlayerListPacket;
 use shoghicp\BigBrother\network\protocol\Play\TitlePacket;
 use shoghicp\BigBrother\network\ProtocolInterface;
 use shoghicp\BigBrother\utils\Binary;
+use shoghicp\BigBrother\utils\InventoryUtils;
 
 class DesktopPlayer extends Player{
 
@@ -51,6 +55,7 @@ class DesktopPlayer extends Player{
 	private $bigBrother_username;
 	private $bigbrother_clientId;
 	private $bigBrother_dimension;
+	private $inventoryutils;
 	protected $Settings = [];
 	/** @var ProtocolInterface */
 	protected $interface;
@@ -60,6 +65,11 @@ class DesktopPlayer extends Player{
 		$this->bigbrother_clientId = $clientID;
 		parent::__construct($interface, $clientID, $address, $port);
 		$this->setRemoveFormat(false);// Color Code
+		$this->inventoryutils = new InventoryUtils($this);
+	}
+
+	public function getInventoryUtils(){
+		return $this->inventoryutils;
 	}
 
 	public function bigBrother_getDimension(){
@@ -252,6 +262,10 @@ class DesktopPlayer extends Player{
 			$pk->radius = 8;
 			$this->handleDataPacket($pk);
 
+			$pk = new ResourcePackClientResponsePacket();
+			$pk->status = ResourcePackClientResponsePacket::STATUS_COMPLETED;
+			$this->handleDataPacket($pk);
+
 			$pk = new KeepAlivePacket();
 			$pk->id = mt_rand();
 			$this->putRawPacket($pk);
@@ -386,6 +400,22 @@ class DesktopPlayer extends Player{
 			}
 		}
 		return false;
+	}
+
+	public function handleDataPacket(DataPacket $packet){
+		if($this->connected === false){
+			return;
+		}
+
+		$timings = Timings::getReceiveDataPacketTimings($packet);
+		$timings->startTiming();
+
+		$this->getServer()->getPluginManager()->callEvent($ev = new DataPacketReceiveEvent($this, $packet));
+		if(!$ev->isCancelled() and !$packet->handle($this)){
+			$this->getServer()->getLogger()->debug("Unhandled " . $packet->getName() . " received from " . $this->getName() . ": 0x" . bin2hex($packet->buffer));
+		}
+
+		$timings->stopTiming();
 	}
 
 	public function putRawPacket(Packet $packet){

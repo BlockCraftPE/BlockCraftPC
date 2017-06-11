@@ -15,23 +15,25 @@
  * GNU General Public License for more details.
 */
 
-namespace shoghicp\BigBrother\network\protocol\Play\Client;
+namespace shoghicp\BigBrother\network\protocol\Play;
 
 use shoghicp\BigBrother\network\Packet;
 
-class KeepAlivePacket extends Packet{
+class EnchantItemPacket extends Packet{
 
-	public $id;
+	public $windowID;
+	public $enchantment;
 
 	public function pid(){
-		return 0x0c;
+		return 0x07;
 	}
 
 	public function encode(){
-		
+
 	}
 
 	public function decode(){
-		$this->id = $this->getVarInt();
+		$this->windowID = $this->getByte();
+		$this->enchantment = $this->getByte();
 	}
 }
